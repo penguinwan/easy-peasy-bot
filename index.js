@@ -80,29 +80,46 @@ controller.on('rtm_close', function (bot) {
  * Core bot logic goes here!
  */
 // BEGIN EDITING HERE!
+var pr = [];
 
-controller.on('bot_channel_join', function (bot, message) {
-    bot.reply(message, "I'm here!")
+controller.hears(['pr', 'PR'], ['direct_mention', 'mention'], function(bot,message) {
+    var tokens = message.text.trim().split(' ');
+    pr.push(tokens[1]);
+    bot.reply(message, 'I will take care of it! ');
 });
 
-controller.hears('hello', 'direct_message', function (bot, message) {
-    bot.reply(message, 'Hello!');
+controller.hears(['done', 'Done', 'DONE'], ['direct_mention', 'mention'], function(bot,message) {
+    var tokens = message.text.trim().split(' ');
+    var donePr = tokens[1];
+    for(var i = pr.length - 1; i >= 0; i--) {
+        if(pr[i] === donePr) {
+            pr.splice(i, 1);
+        }
+    }
+    bot.reply(message, 'Awesome!');
 });
 
+controller.hears(['help', 'Help', 'HELP'], ['direct_mention', 'mention'], function(bot,message) {
+    bot.reply(message, '1. PR <url>\n 2. Done <url>\nMacht keinen Scheiß!\n');
+});
 
-/**
- * AN example of what could be:
- * Any un-handled direct mention gets a reaction and a pat response!
- */
-//controller.on('direct_message,mention,direct_mention', function (bot, message) {
-//    bot.api.reactions.add({
-//        timestamp: message.ts,
-//        channel: message.channel,
-//        name: 'robot_face',
-//    }, function (err) {
-//        if (err) {
-//            console.log(err)
-//        }
-//        bot.reply(message, 'I heard you loud and clear boss.');
-//    });
-//});
+var bot = controller.spawn({
+  incoming_webhook: {
+    url: process.env.WEBHOOK
+  }
+})
+
+var schedule = require('node-schedule');
+var j = schedule.scheduleJob('* * * * *', function() {
+    if(pr.length > 0) {
+        bot.sendWebhook({
+            text: 'Come on kids, you can do better! \n'+pr.join('\n'),
+            channel: '#general',
+        },function(err,res) {
+            if (err) {
+                console.log('error!!');
+            }
+        });
+    }
+  
+});
